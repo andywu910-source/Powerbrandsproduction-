@@ -1,0 +1,74 @@
+# Secrets and environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+*.token
+*token*.json
+auth.json
+credentials*.json
+service-account*.json
+secrets/
+.secrets/
+deploy-secrets*
+*.secret
+
+# Dependencies / build output (vendor is installed with `composer install`)
+/vendor/
+/node_modules/
+/public/build
+/public/hot
+/public/storage
+
+# Laravel runtime data
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/framework/testing/*
+/storage/app/private/*
+/storage/app/public/*
+/storage/*.key
+/storage/pail
+/bootstrap/cache/*.php
+!/storage/**/.gitkeep
+*.log
+*.sqlite
+*.sqlite3
+
+# Database dumps and backups
+*.sql
+*.sql.gz
+*.dump
+*.bak
+*.backup
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+backups/
+backup-*/
+*-backup-*/
+
+# Uploads with real data (COAs, certificates, label art, imports)
+/uploads/
+/storage/app/uploads/
+
+# Tooling / OS
+.phpunit.cache
+.phpunit.result.cache
+.phpactor.json
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+.DS_Store
+Thumbs.db
+Homestead.json
+Homestead.yaml

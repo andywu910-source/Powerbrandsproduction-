@@ -1,0 +1,36 @@
+/* Compliance Checklists (phone-first cards) */
+.cmp-note{background:#fffbeb;border:1px solid #fcd34d;color:#78350f;border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:14px}
+.cmp-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.cmp-tabs a{padding:8px 14px;border-radius:999px;border:1px solid #d1d5db;text-decoration:none;color:#111827;background:#fff;font-weight:600}
+.cmp-tabs a.on{background:#111827;color:#fff;border-color:#111827}
+.cmp-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.cmp-head h3{margin:0;font-size:18px}
+.cmp-nav a{display:inline-block;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;text-decoration:none;color:#111827;background:#fff}
+.cmp-prog{flex:1 1 220px;min-width:200px}
+.cmp-prog .bar{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+.cmp-prog .bar i{display:block;height:100%;background:#15803d}
+.cmp-prog b{font-size:14px}
+.cmp-ro{background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:8px 12px;margin:0 0 10px;font-size:14px;color:#374151}
+.cmp-list{display:grid;gap:10px}
+.cmp-item{background:#fff;border:1px solid #e5e7eb;border-left:5px solid #d1d5db;border-radius:10px;padding:12px}
+.cmp-item.done{border-left-color:#15803d;background:#f0fdf4}
+.cmp-item .top{display:flex;gap:12px;align-items:flex-start}
+.cmp-item .top input[type=checkbox]{width:26px;height:26px;flex:0 0 26px;margin-top:2px;accent-color:#15803d}
+.cmp-item .ttl{font-weight:700;font-size:15px}
+.cmp-item .desc{color:#4b5563;font-size:14px;margin-top:2px}
+.cmp-item .meta{color:#15803d;font-size:13px;margin-top:4px;font-weight:600}
+.cmp-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+.cmp-fields label{display:flex;flex-direction:column;font-size:12px;color:#6b7280;gap:3px}
+.cmp-fields select,.cmp-fields input,.cmp-fields textarea{font-size:15px;padding:7px 8px;border:1px solid #d1d5db;border-radius:6px;min-height:38px;width:100%;box-sizing:border-box}
+.cmp-fields .wide{grid-column:1/-1}
+.cmp-fields textarea{min-height:38px;resize:vertical}
+.cmp-save{margin-top:8px;text-align:right}
+.cmp-hist{width:100%;border-collapse:collapse}
+.cmp-hist td,.cmp-hist th{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left}
+@media (max-width:760px){
+  .cmp-fields{grid-template-columns:1fr 1fr}
+  .cmp-head h3{font-size:16px}
+  .cmp-save button{width:100%;min-height:42px}
+}
+@media (max-width:420px){.cmp-fields{grid-template-columns:1fr}}
+.cmp-sec{margin:18px 0 8px;font-size:16px}
