@@ -13,17 +13,21 @@ class DeviationService
 {
     public function __construct(private SignatureService $sig) {}
 
-    public function open(?Batch $batch, ?Model $source, string $title, string $description, bool $activeIngredient, bool $requiresQc, int $signerId, User $by, ?int $lotId = null): Deviation
+    public function open(?Batch $batch, ?Model $source, string $title, string $description, bool $activeIngredient, bool $requiresQc, int $signerId, User $by, ?int $lotId = null, ?string $origin = null, ?string $originRef = null): Deviation
     {
+        if ($origin !== null && ! isset(Deviation::ORIGINS[$origin])) {
+            throw GateFailed::because('Pick a source from the list.');
+        }
         if (trim($title) === '' || trim($description) === '') {
             throw GateFailed::because('Say what happened (title and description).');
         }
 
-        return DB::transaction(function () use ($batch, $source, $title, $description, $activeIngredient, $requiresQc, $signerId, $by, $lotId) {
+        return DB::transaction(function () use ($batch, $source, $title, $description, $activeIngredient, $requiresQc, $signerId, $by, $lotId, $origin, $originRef) {
             $d = Deviation::create([
                 'public_id' => PublicId::next('DEV'),
                 'batch_id' => $batch?->id, 'material_lot_id' => $lotId,
                 'source_type' => $source?->getMorphClass(), 'source_id' => $source?->getKey(),
+                'origin' => $origin, 'origin_ref' => ($originRef = trim((string) $originRef)) === '' ? null : mb_substr($originRef, 0, 120),
                 'title' => trim($title), 'description' => trim($description),
                 'active_ingredient' => $activeIngredient, 'requires_qc_approval' => $requiresQc,
                 'status' => 'open', 'recorded_by_user_id' => $by->id,
@@ -59,7 +63,9 @@ class DeviationService
         }
         DB::transaction(function () use ($d, $data, $signerId, $by) {
             $this->sig->sign($d, 'closed', $signerId, $by, ['qc' => true]);
+            $opt = fn ($k) => ($v = trim((string) ($data[$k] ?? ''))) === '' ? $d->{$k} : $v;
             $d->update(['root_cause' => $data['root_cause'], 'corrective_action' => $data['corrective_action'], 'disposition' => $data['disposition'],
+                'preventive_action' => $opt('preventive_action'), 'effectiveness_check' => $opt('effectiveness_check'),
                 'impact' => $data['impact'] ?? $d->impact, 'status' => 'closed', 'closed_at' => now()]);
             DriveOutbox::enqueue($d, 'closed', [$d->public_id, $data['root_cause'], $data['corrective_action'], $data['disposition']]);
         });

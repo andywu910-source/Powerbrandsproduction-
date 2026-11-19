@@ -110,6 +110,16 @@ class ChecklistService
         return ['created' => $created, 'overdue' => $overdue];
     }
 
+    /** Retired templates (Nov 19): open checklists can't be filled in or signed; finished ones can still be verified. */
+    public static function assertNotRetired(ChecklistInstance $inst): void
+    {
+        if ($code = \App\Support\Retirements::replacedBy($inst->template)) {
+            throw GateFailed::because(\App\Support\Retirements::replacementActive($code)
+                ? "This checklist was retired. Record it in the Compliance hub instead ({$code})."
+                : 'This checklist was retired and is no longer kept.');
+        }
+    }
+
     public function createInstance(ChecklistTemplate $t, string $scope, string $periodKey, ?Carbon $due, ?Carbon $overdue, ?int $batchId = null): ChecklistInstance
     {
         $inst = ChecklistInstance::create([
@@ -155,6 +165,7 @@ class ChecklistService
     /** @param array<int, array{response?:?string, note?:?string, deviation_id?:?int}> $answers keyed by instance item id */
     public function saveAnswers(ChecklistInstance $inst, array $answers, User $by): void
     {
+        self::assertNotRetired($inst);
         if (! $inst->isOpen()) {
             throw GateFailed::because('This checklist is already signed. Use a correction to change an answer.');
         }
@@ -205,6 +216,7 @@ class ChecklistService
 
     public function complete(ChecklistInstance $inst, int $signerId, User $by, ?string $lateReason = null, ?int $performerPersonId = null): void
     {
+        self::assertNotRetired($inst);
         if (! $inst->isOpen()) {
             throw GateFailed::because('This checklist is not open.');
         }

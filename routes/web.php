@@ -26,6 +26,12 @@ Route::middleware('guest')->group(function () {
         ->middleware('throttle:login')->name('login.submit');
 });
 
+// Compliance hub review links: one-time, /logs only. The controller 404s unless PBP_PREVIEW_LINKS=true.
+Route::get('/logs/preview/{token}', [\App\Http\Controllers\LogsPreviewController::class, 'show'])
+    ->middleware('throttle:10,1')->name('logs-preview.show');
+Route::post('/logs/preview/{token}', [\App\Http\Controllers\LogsPreviewController::class, 'consume'])
+    ->middleware('throttle:10,1')->name('logs-preview.go');
+
 Route::middleware(['auth', 'active', 'writable'])->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
@@ -34,6 +40,7 @@ Route::middleware(['auth', 'active', 'writable'])->group(function () {
 
     Route::get('/', fn () => redirect()->route('dashboard'));
     Route::get('/dashboard', [PageController::class, 'dashboard'])->name('dashboard');
+    Route::get('/lots/lookup', \App\Http\Controllers\LotLookupController::class)->middleware('throttle:120,1')->name('lots.lookup');
     Route::get('/soon/{section}', [PageController::class, 'comingSoon'])->name('soon');
 
     // ---------------- Production (batch number is the URL key)
@@ -105,6 +112,19 @@ Route::middleware(['auth', 'active', 'writable'])->group(function () {
         Route::post('/{batch}/barcode', [BatchLogController::class, 'barcode'])->name('barcode');
         Route::post('/{batch}/status', [BatchLogController::class, 'logStatus'])->name('status');
         Route::post('/{batch}/expiration', [BatchLogController::class, 'expiration'])->name('expiration');
+        Route::post('/{batch}/signoff', [BatchLogController::class, 'signoff'])->name('signoff');
+    });
+
+    // ---------------- Compliance hub: every OCM / GMP log (config/pbp_logs.php), due status, entry forms, related entries
+    Route::middleware(['module:logs', 'logs.visible'])->prefix('logs')->name('logs.')->controller(\App\Http\Controllers\LogHubController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/related', 'related')->name('related');
+        Route::post('/entries/{entry}/void', 'void')->whereNumber('entry')->name('void');
+        Route::get('/verification', 'queue')->name('queue');
+        Route::post('/entries/{entry}/verify', 'verify')->whereNumber('entry')->name('verify');
+        Route::post('/entries/{entry}/send-back', 'sendBack')->whereNumber('entry')->name('send-back');
+        Route::get('/{log}', 'show')->name('show');
+        Route::post('/{log}', 'store')->name('store');
     });
 
     // ---------------- Compliance Checklists (weekly / monthly; internal, not official OCM documents)
@@ -116,6 +136,7 @@ Route::middleware(['auth', 'active', 'writable'])->group(function () {
         Route::post('/setup/items/{item}', 'saveItem')->name('item.save');
         Route::get('/{freq}', 'period')->whereIn('freq', ['weekly', 'monthly', 'quarterly', 'annual'])->name('period');
         Route::post('/{freq}/{period}/items/{item}', 'save')->whereIn('freq', ['weekly', 'monthly', 'quarterly', 'annual'])->where('period', '\d{4}-\d{2}-\d{2}')->name('save');
+        Route::post('/{freq}/{period}/items/{item}/confirm', 'confirm')->whereIn('freq', ['weekly', 'monthly', 'quarterly', 'annual'])->where('period', '\d{4}-\d{2}-\d{2}')->name('confirm');
     });
 
     // ---------------- Weekly Schedule (preview first)
@@ -134,6 +155,8 @@ Route::middleware(['auth', 'active', 'writable'])->group(function () {
         Route::post('/jobs/{job}', 'saveJob')->name('job.save');
         Route::post('/jobs/{job}/remove', 'removeJob')->name('job.remove');
         Route::post('/w/{week}/people', 'addPerson')->name('roster.add');
+        Route::post('/w/{week}/p/{employee}/all', 'bulkRow')->name('bulk.row');
+        Route::post('/w/{week}/d/{day}/all', 'bulkDay')->where('day', '\\d{4}-\\d{2}-\\d{2}')->name('bulk.day');
         Route::post('/roster/{roster}', 'saveRoster')->name('roster.save');
         Route::post('/w/{week}/notes', 'addNote')->name('note.add');
         Route::post('/notes/{note}', 'saveNote')->name('note.save');
@@ -196,6 +219,13 @@ Route::middleware(['auth', 'active', 'writable'])->group(function () {
     Route::post('/setup/{res}', [SetupController::class, 'store'])->name('setup.store');
     Route::get('/setup/{res}/{id}', [SetupController::class, 'edit'])->whereNumber('id')->name('setup.edit');
     Route::put('/setup/{res}/{id}', [SetupController::class, 'update'])->whereNumber('id')->name('setup.update');
+
+    // Weekly Bookkeeping (admin-only, switched with PBP_MODULES=bookkeeping).
+    // Kept in its own file so a hand-merge only adds this line here.
+    require __DIR__.'/bookkeeping.php';
+
+    // Sign-offs are immutable; an admin may void one with a reason.
+    Route::post('/signatures/{signature}/void', [\App\Http\Controllers\SignatureController::class, 'void'])->whereNumber('signature')->middleware('role:admin')->name('signatures.void');
 
     Route::middleware('role:admin')->prefix('users')->name('users.')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('index');

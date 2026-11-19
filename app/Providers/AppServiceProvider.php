@@ -37,6 +37,8 @@ class AppServiceProvider extends ServiceProvider
         'schedule_note' => \App\Models\ScheduleNote::class,
         'compliance_item' => \App\Models\ComplianceItem::class,
         'compliance_entry' => \App\Models\ComplianceEntry::class,
+        'log_definition' => \App\Models\LogDefinition::class,
+        'log_entry' => \App\Models\LogEntry::class,
         'process_template' => \App\Models\ProcessTemplate::class,
         'process_stage' => \App\Models\ProcessTemplateStage::class,
         'pqp' => \App\Models\Pqp::class,

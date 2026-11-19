@@ -18,7 +18,7 @@
             <div class="f-field"><label>Supplier lot #</label><input class="pb-input" name="supplier_lot" value="{{ old('supplier_lot') }}"></div>
             <div class="f-field"><label>Grade</label><input class="pb-input" name="grade" value="{{ old('grade') }}"></div>
             <div class="f-field"><label>Metrc manifest #</label><input class="pb-input" name="metrc_manifest_no" value="{{ old('metrc_manifest_no') }}"></div>
-            <div class="f-field"><label>Metrc package UID</label><input class="pb-input" name="metrc_package_uid" value="{{ old('metrc_package_uid') }}"></div>
+            <div class="f-field"><label for="rc_uid">Metrc package UID</label><div class="pb-scan-wrap"><input id="rc_uid" class="pb-input" name="metrc_package_uid" value="{{ old('metrc_package_uid') }}" data-scan="metrc" placeholder="Type or scan">@include('partials.scan', ['for' => 'rc_uid', 'label' => 'Metrc package UID'])</div></div>
             <div class="f-field"><label>Expiration date</label><input class="pb-input" type="date" name="expiration_date" value="{{ old('expiration_date') }}"></div>
             <div class="f-field"><label>Received at (blank = now)</label><input class="pb-input" type="datetime-local" name="received_at" value="{{ old('received_at') }}"></div>
         </div>

@@ -29,29 +29,43 @@
             @endif
         </div>
     @else
+        <p class="sch-legend" id="schLegend"><b>Blank = working.</b> Everyone counts as working their day length unless a day is marked
+            <span class="sch-chip off">Off</span> or <span class="sch-chip partial">Partial</span>.@if ($canEdit) Click a day to change it, or use All working / All off for a person or a day.@endif</p>
         <div class="table-wrap"><table class="pb-table sch-grid" id="schGrid">
             <thead><tr><th class="sch-person">Person</th>
-                @foreach ($days as $d)<th class="{{ $d->toDateString() === $today ? 'is-today' : '' }}">{{ $d->format('D') }} <span class="pb-muted">{{ $d->format('n/j') }}</span></th>@endforeach
-                @if ($showLabor)<th class="sch-hours">Labor $</th>@endif</tr></thead>
+                @foreach ($days as $d)<th class="{{ $d->toDateString() === $today ? 'is-today' : '' }}">{{ $d->format('D') }} <span class="pb-muted">{{ $d->format('n/j') }}</span>
+                    @if ($canEdit)<div class="sch-bulk sch-bulk-day">
+                        <form method="POST" action="{{ route('schedule.bulk.day', [$week, $d->toDateString()]) }}">@csrf<input type="hidden" name="status" value="working"><button class="sch-bulk-btn" title="Everyone working on {{ $d->format('l') }}" aria-label="Everyone working on {{ $d->format('l n/j') }}">All working</button></form>
+                        <form method="POST" action="{{ route('schedule.bulk.day', [$week, $d->toDateString()]) }}" onsubmit="return confirm('Mark everyone off on {{ $d->format('l n/j') }}?')">@csrf<input type="hidden" name="status" value="off"><button class="sch-bulk-btn off" title="Everyone off on {{ $d->format('l') }} (e.g. a holiday)" aria-label="Everyone off on {{ $d->format('l n/j') }}">All off</button></form>
+                    </div>@endif
+                </th>@endforeach
+                @if ($showLabor)<th class="sch-hours">Labor $</th>@endif
+                <th class="sch-total" title="Scheduled hours for this week (Working = the person's day length, Partial = its hours, Off = 0). There is no clock-in data, so these are not hours clocked.">Total hours <span class="sch-total-note">scheduled</span></th></tr></thead>
             <tbody>
             @foreach ($grid['rows'] as $row)
                 @php $e = $row['employee']; $r = $row['roster']; @endphp
                 <tr>
-                    <th class="sch-person" scope="row"><b>{{ $e->name }}</b></th>
+                    <th class="sch-person" scope="row"><b>{{ $e->name }}</b>
+                        @if ($canEdit)<div class="sch-bulk sch-bulk-row">
+                            <form method="POST" action="{{ route('schedule.bulk.row', [$week, $e]) }}">@csrf<input type="hidden" name="status" value="working"><button class="sch-bulk-btn" aria-label="{{ $e->name }}: all week working">All working</button></form>
+                            <form method="POST" action="{{ route('schedule.bulk.row', [$week, $e]) }}" onsubmit="return confirm('Mark {{ e($e->name) }} off all week?')">@csrf<input type="hidden" name="status" value="off"><button class="sch-bulk-btn off" aria-label="{{ $e->name }}: all week off">All off</button></form>
+                        </div>@endif
+                    </th>
                     @foreach ($days as $d)
-                        @php $c = $row['cells']->get($d->toDateString()); $st = $c?->status; @endphp
-                        <td class="sch-cell st-{{ $st ?? 'none' }} {{ $d->toDateString() === $today ? 'is-today' : '' }}">
-                            <a class="sch-cell-link" href="{{ route('schedule.cell', [$week, $e, $d->toDateString()]) }}" aria-label="{{ $e->name }}, {{ $d->format('l') }}: {{ $st ? ScheduleCell::STATUSES[$st] : 'nothing scheduled' }}">
+                        @php $c = $row['cells']->get($d->toDateString()); $st = ScheduleCell::effective($c); $blank = ScheduleCell::isDefault($c); @endphp
+                        <td class="sch-cell st-{{ $st }} {{ $blank ? 'is-default' : '' }} {{ $d->toDateString() === $today ? 'is-today' : '' }}">
+                            <a class="sch-cell-link" href="{{ route('schedule.cell', [$week, $e, $d->toDateString()]) }}" aria-label="{{ $e->name }}, {{ $d->format('l') }}: {{ ScheduleCell::STATUSES[$st] }}{{ $blank ? ' (blank = working)' : '' }}">
                                 @if ($st === 'off')<span class="sch-chip off">Off</span>
                                 @elseif ($st === 'partial')<span class="sch-chip partial">Partial · {{ Schedule::fmtHours($c->hours) }} h</span>
-                                @elseif ($st === 'working')<span class="sch-chip working">Working</span>
-                                @else<span class="sch-chip none">{{ $canEdit ? '+ Plan' : '—' }}</span>@endif
+                                @elseif ($blank)<span class="sch-chip working is-default" title="Blank = working">Working</span>
+                                @else<span class="sch-chip working">Working</span>@endif
                                 @if ($c?->note)<span class="sch-note">{{ $c->note }}</span>@endif
                                 @foreach ($c?->jobs ?? [] as $job) @include('schedule._job', ['job' => $job]) @endforeach
                             </a>
                         </td>
                     @endforeach
                     @if ($showLabor)<td class="sch-hours">${{ number_format($row['labor'], 0) }}</td>@endif
+                    <td class="sch-total" title="{{ $e->name }}: {{ Schedule::fmtHours($row['hours']) }} scheduled hours this week">{{ Schedule::fmtHours($row['hours']) }} h</td>
                 </tr>
             @endforeach
             </tbody>

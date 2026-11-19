@@ -5,9 +5,12 @@
     @section('parent_title', 'Checklists')
     @section('parent_url', route('checklists.index'))
 @endif
-@php use App\Support\Fmt; $ro = auth()->user()->isViewer() || ! $i->isOpen(); $st = $i->displayStatus(); @endphp
+@php use App\Support\Fmt; $retiredTo = \App\Support\Retirements::replacedBy($i->template); $ro = auth()->user()->isViewer() || ! $i->isOpen() || $retiredTo; $st = $i->displayStatus(); @endphp
 
 @section('content')
+@if ($retiredTo)
+    <div class="pb-alert pb-alert-warn" id="chkRetired">This checklist was retired (it duplicates Compliance hub log {{ $retiredTo }}). It is kept for the record; @if ($i->status === 'awaiting_verification') it can still be verified. @elseif (\App\Support\Retirements::replacementActive($retiredTo)) record new entries in the <a href="{{ route('logs.index', ['q' => $retiredTo]) }}">Compliance hub</a>. @else that hub log was retired too, so nothing new is recorded. @endif</div>
+@endif
 <section class="card">
     <div class="card-head"><b>{{ $i->public_id }}</b>
         <span class="pill {{ Fmt::pill($st) }}">{{ ucfirst(str_replace('_', ' ', $st)) }}</span>

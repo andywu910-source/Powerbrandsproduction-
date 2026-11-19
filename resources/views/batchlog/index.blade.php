@@ -6,7 +6,7 @@
 <section class="card">
     <div class="card-head"><h3>Batches</h3><span class="pb-muted">Every batch, with its full record. Change a batch's status with its Status menu; open one to print or download the PDF.</span></div>
     <form method="GET" class="pb-inline-form">
-        <div class="f-field"><label>Search</label><input class="pb-input" name="q" value="{{ request('q') }}" placeholder="Batch number, BPR, barcode or Metrc UID"></div>
+        <div class="f-field"><label for="bl_q">Search</label><div class="pb-scan-wrap"><input id="bl_q" class="pb-input" name="q" value="{{ request('q') }}" placeholder="Batch number, BPR, barcode or Metrc UID" data-scan="search" data-scan-submit>@include('partials.scan', ['for' => 'bl_q', 'label' => 'search'])</div></div>
         <div class="f-field"><label>Status</label><select name="status" class="pb-select">
             @foreach (['all' => 'All (not void)'] + \App\Models\Batch::LOG_STATUSES + ['void' => 'Void', 'everything' => 'All, including void'] as $k => $l)
                 <option value="{{ $k }}" @selected($status === $k)>{{ $l }}</option>@endforeach</select></div>

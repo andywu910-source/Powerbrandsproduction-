@@ -82,6 +82,15 @@ class User extends Authenticatable
         return $this->hasOne(Person::class);
     }
 
+    /**
+     * Staff account (Andy, Nov 19): an operator login linked to a person on the Weekly Schedule. Staff sign off
+     * their own work only: the signer is always themselves, never another name on a shared screen.
+     */
+    public function signsAsSelf(): bool
+    {
+        return $this->isOperator() && \App\Models\ScheduleEmployee::where('user_id', $this->id)->exists();
+    }
+
     /** Supervisors and admins can do supervisor work. */
     public function isSupervisorOrAdmin(): bool
     {

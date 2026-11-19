@@ -18,7 +18,7 @@
             <div class="f-field"><label>Sample ID</label><input class="pb-input" name="coa_sample_id" value="{{ old('coa_sample_id', $batch->coa_sample_id) }}" required></div>
             <div class="f-field"><label>Potency on COA</label><input class="pb-input" type="number" step="0.001" name="coa_potency" value="{{ old('coa_potency', $batch->coa_potency) }}"></div>
             <div class="f-field"><label>Result</label><select name="coa_result" class="pb-select" required><option value="">—</option><option value="pass" @selected($batch->coa_result === 'pass')>Pass</option><option value="fail" @selected($batch->coa_result === 'fail')>Fail</option></select></div>
-            <div class="f-field"><label>Metrc package UID (output)</label><input class="pb-input" name="output_metrc_uid" value="{{ old('output_metrc_uid', $batch->output_metrc_uid) }}"></div>
+            <div class="f-field"><label for="s9_uid">Metrc package UID (output)</label><div class="pb-scan-wrap"><input id="s9_uid" class="pb-input" name="output_metrc_uid" value="{{ old('output_metrc_uid', $batch->output_metrc_uid) }}" data-scan="metrc" placeholder="Type or scan">@include('partials.scan', ['for' => 's9_uid', 'label' => 'output Metrc package UID'])</div></div>
         </div>
         <div><button class="pb-btn pb-btn-ghost" type="submit">Save COA details</button></div>
     </form>

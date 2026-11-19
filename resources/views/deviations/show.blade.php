@@ -13,11 +13,12 @@
     <div class="pb-kv">
         @if ($d->batch)<div><span>Batch</span><b><a class="pb-bn" href="{{ route('production.show', $d->batch) }}">{{ $d->batch->batch_number }}</a></b></div>@endif
         @if ($d->lot)<div><span>Lot</span><b>{{ $d->lot->public_id }}</b></div>@endif
+        @if ($d->origin)<div id="devOrigin"><span>Source</span><b>{{ $d->originLabel() }}@if ($d->origin_ref) · {{ $d->origin_ref }}@endif</b></div>@endif
         <div><span>Opened</span><b>{{ Fmt::dt($d->created_at) }}</b></div>
         @if ($d->closed_at)<div><span>Closed</span><b>{{ Fmt::dt($d->closed_at) }}</b></div>@endif
     </div>
     <p style="margin-top:10px">{{ $d->description }}</p>
-    @foreach (['impact' => 'Impact', 'root_cause' => 'Root cause', 'corrective_action' => 'Corrective action', 'disposition' => 'Disposition'] as $f => $l)
+    @foreach (['impact' => 'Impact', 'root_cause' => 'Root cause', 'corrective_action' => 'Corrective action', 'preventive_action' => 'Preventive action', 'disposition' => 'Disposition', 'effectiveness_check' => 'Effectiveness check'] as $f => $l)
         @if ($d->{$f})<p><b>{{ $l }}:</b> {{ $d->{$f} }}</p>@endif
     @endforeach
     @include('partials.rec.signatures', ['sigs' => $d->signatures])
@@ -36,10 +37,12 @@
         <div class="f-field"><label>Impact</label><textarea name="impact" rows="2">{{ $d->impact }}</textarea></div>
         <div class="f-field"><label>Root cause</label><textarea name="root_cause" rows="2" required>{{ $d->root_cause }}</textarea></div>
         <div class="f-field"><label>Corrective action</label><textarea name="corrective_action" rows="2" required>{{ $d->corrective_action }}</textarea></div>
+        <div class="f-field"><label>Preventive action <span class="pb-muted">(optional)</span></label><textarea name="preventive_action" rows="2">{{ $d->preventive_action }}</textarea></div>
         <div class="f-field"><label>Disposition</label><textarea name="disposition" rows="2" required>{{ $d->disposition }}</textarea></div>
+        <div class="f-field"><label>Effectiveness check <span class="pb-muted">(optional; can be added later as a correction)</span></label><textarea name="effectiveness_check" rows="2">{{ $d->effectiveness_check }}</textarea></div>
         @include('partials.rec.sign', ['label' => 'Closed by (QC reviewer)', 'only' => $qcReviewers])
         <div><button class="btn-save" type="submit">Close deviation</button></div></form>
-    @include('partials.rec.correct', ['record' => $d, 'type' => 'deviation', 'fields' => ['description' => 'Description', 'impact' => 'Impact', 'root_cause' => 'Root cause', 'corrective_action' => 'Corrective action', 'disposition' => 'Disposition']])
+    @include('partials.rec.correct', ['record' => $d, 'type' => 'deviation', 'fields' => ['description' => 'Description', 'impact' => 'Impact', 'root_cause' => 'Root cause', 'corrective_action' => 'Corrective action', 'preventive_action' => 'Preventive action', 'effectiveness_check' => 'Effectiveness check', 'disposition' => 'Disposition', 'origin_ref' => 'Source reference']])
     @include('partials.rec.void', ['action' => route('records.void', ['deviation', $d->id]), 'what' => 'deviation'])
 </section>
 @endunless

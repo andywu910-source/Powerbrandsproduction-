@@ -116,6 +116,32 @@ class ScheduleController extends Controller
         return $this->back($r, $week, $employee, $cell, 'Saved.');
     }
 
+    /** One person's whole week: All working / All off. */
+    public function bulkRow(Request $r, ScheduleWeek $week, ScheduleEmployee $employee)
+    {
+        $this->editOnly($r);
+        $v = $r->validate(['status' => ['required', 'in:working,off']]);
+        abort_unless(ScheduleRoster::where('week_id', $week->id)->where('employee_id', $employee->id)->whereNull('removed_at')->exists(), 404);
+        $n = $this->svc->bulkSet($week, [$employee], $week->days(), $v['status'], $r->user(), 'row');
+
+        return redirect()->route('schedule.index', ['week' => $week->week_start->toDateString()])
+            ->with('status', $employee->name.': all week '.($v['status'] === 'off' ? 'off' : 'working').' ('.$n.' day'.($n === 1 ? '' : 's').' changed).');
+    }
+
+    /** Everyone on one day (e.g. a holiday): All working / All off. */
+    public function bulkDay(Request $r, ScheduleWeek $week, string $day)
+    {
+        $this->editOnly($r);
+        $v = $r->validate(['status' => ['required', 'in:working,off']]);
+        $d = collect($week->days())->first(fn ($x) => $x->toDateString() === $day);
+        abort_unless($d, 404);
+        $people = $week->roster()->with('employee')->get()->pluck('employee')->all();
+        $n = $this->svc->bulkSet($week, $people, [$d], $v['status'], $r->user(), 'day');
+
+        return redirect()->route('schedule.index', ['week' => $week->week_start->toDateString()])
+            ->with('status', $d->format('l n/j').': everyone '.($v['status'] === 'off' ? 'off' : 'working').' ('.$n.' changed).');
+    }
+
     /** Batches that are not Finished (and not void): what a plan or a Pending note can point at. */
     public static function openBatches()
     {

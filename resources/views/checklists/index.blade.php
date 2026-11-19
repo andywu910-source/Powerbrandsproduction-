@@ -87,7 +87,8 @@
                 <td>{{ $t->frequency === 'on_demand' ? '—' : $t->due_time.' (+'.$t->grace_hours.' h)' }}</td>
                 <td>v{{ $t->currentVersion?->version_no }}</td>
                 <td>{{ $t->currentVersion?->items()->count() }}</td>
-                <td>{!! $t->active ? '<span class="pill ok">Yes</span>' : '<span class="pill">No</span>' !!}</td>
+                <td>{!! $t->active ? '<span class="pill ok">Yes</span>' : '<span class="pill">No</span>' !!}
+                    @if ($rep = \App\Support\Retirements::replacedBy($t))<br><span class="pb-muted">@if (\App\Support\Retirements::replacementActive($rep))Retired: use <a href="{{ route('logs.index', ['q' => $rep]) }}">Compliance {{ $rep }}</a>@else Retired (no longer kept)@endif</span>@endif</td>
             </tr>
         @endforeach
         </tbody></table></div>

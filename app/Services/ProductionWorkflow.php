@@ -421,7 +421,12 @@ class ProductionWorkflow
         if ($needsScale && ! $rows->contains(fn ($r) => $r->equipment->is_scale)) {
             $p[] = 'This batch weighs ingredients, so a scale must be on the equipment list.';
         }
-        if ($needsScale && \App\Support\Modules::enabled('checklists') && Setting::get('gate_require_daily_scale_check', true)) {
+        $scaleTemplate = ChecklistTemplate::where('code', 'scale_check_daily')->first();
+        if ($needsScale && $scaleTemplate && ! $scaleTemplate->active) {
+            // Nov 19: the Checklists scale check was retired, and later the same day (Andy) the hub's BAL Balance
+            // Check too, so there is no daily balance-check gate any more. Scale register problems
+            // (calibration, inspection, seal) above still block.
+        } elseif ($needsScale && \App\Support\Modules::enabled('checklists') && Setting::get('gate_require_daily_scale_check', true)) {
             if (ChecklistService::isPerScale('scale_check_daily')) {
                 // Linked to the scale register: every scale on this batch needs its own check today.
                 foreach ($rows->filter(fn ($r) => $r->equipment->is_scale) as $r) {

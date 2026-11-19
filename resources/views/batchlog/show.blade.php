@@ -15,6 +15,18 @@
     <p class="pb-muted">Built straight from the signed records. Nothing here can be edited; corrections are made on the record itself and show up here with the old value kept.</p>
     @include('batchlog.partials.summary', ['s' => $s, 'pdf' => false])
 </section>
+@php $logSigs = $b->signatures()->with('user')->where('meaning', 'log_signoff')->get(); $canLogSign = ! auth()->user()->isViewer() && $b->status !== 'void' && ! $b->isIncoming() && ! (auth()->user()->signsAsSelf() && $logSigs->where('user_id', auth()->id())->where('invalidated_at', null)->isNotEmpty()); @endphp
+<section class="card" id="signoff">
+    <div class="card-head"><h3>Batch log sign-off</h3>@if ($logSigs->where('invalidated_at', null)->isNotEmpty())<span class="pill ok">Signed off</span>@else<span class="pill warn">Not signed off yet</span>@endif</div>
+    <p class="pb-muted">Signing off says you checked this batch log. It records your name and the date and time (Eastern), and it cannot be edited or deleted afterwards. Only an admin can void a sign-off, with a reason that is kept on record.</p>
+    @include('partials.rec.signatures', ['sigs' => $logSigs])
+    @if ($canLogSign)
+        <form method="POST" action="{{ route('batch-log.signoff', $b) }}" class="pb-form">@csrf
+            @include('partials.rec.sign', ['label' => 'Sign off this batch log', 'name' => 'signer_id', 'signers' => \App\Models\User::signers()])
+            <div><button class="btn-save" type="submit">Sign off batch log</button></div>
+        </form>
+    @endif
+</section>
 @if ($b->source === 'sheet')
 <section class="card" id="sheetImport">
     <div class="card-head"><h3>Imported from the Google Sheet</h3><span class="pill">{{ $b->import_id }}</span></div>
@@ -52,7 +64,7 @@
     @if ($canBarcode)
         <form method="POST" action="{{ route('batch-log.barcode', $b) }}" class="pb-inline-form">@csrf
             <div class="f-field"><label for="barcode_number">Barcode number</label>
-                <input id="barcode_number" class="pb-input pb-bn" name="barcode_number" value="{{ old('barcode_number', $b->barcode_number) }}" maxlength="48" autocomplete="off" spellcheck="false" placeholder="e.g. 1A4120300000596000001707">
+                <div class="pb-scan-wrap"><input id="barcode_number" class="pb-input pb-bn" name="barcode_number" value="{{ old('barcode_number', $b->barcode_number) }}" maxlength="48" autocomplete="off" spellcheck="false" placeholder="e.g. 1A4120300000596000001707" data-scan="barcode">@include('partials.scan', ['for' => 'barcode_number', 'label' => 'Barcode number'])</div>
 </div>
             <button class="btn-save" type="submit">Save barcode number</button>
             @if (\App\Support\Modules::enabled('labels'))<a class="pb-btn pb-btn-ghost" href="{{ route('labels.create', ['batch_id' => $b->id]) }}">Labels</a>@endif

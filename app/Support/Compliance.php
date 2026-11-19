@@ -94,6 +94,16 @@ class Compliance
         return false;
     }
 
+    /**
+     * May this person sign off (check off) items? Everyone except an excluded name (Jack) who is NOT a staff login:
+     * Andy (Nov 19): Jack H, a staff / operator login, signs off his own work. The exclusion still keeps Jack out of the
+     * Assignee and Completed-by pick lists (pickable) and blocks an unlinked "Jack" account from defaulting to himself.
+     */
+    public static function canSignOff(User $u): bool
+    {
+        return ! self::excluded($u) || $u->signsAsSelf();
+    }
+
     /** Active users that may be picked as Assignee / Completed by. */
     public static function pickable()
     {

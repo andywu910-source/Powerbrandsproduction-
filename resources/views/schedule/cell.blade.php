@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Schedule · '.$employee->name)
 @section('page_title', 'Weekly Schedule')
-@php use App\Support\Schedule; use App\Models\ScheduleCell; $monday = $week->week_start; $st = $cell->status; @endphp
+@php use App\Support\Schedule; use App\Models\ScheduleCell; $monday = $week->week_start; $st = \App\Models\ScheduleCell::effective($cell); @endphp
 @section('content')
 @include('schedule._nav')
 <section class="card">
@@ -11,9 +11,10 @@
     @if ($canEdit)
         <form method="POST" action="{{ route('schedule.cell.save', [$week, $employee, $day->toDateString()]) }}" class="pb-form" id="cellForm">@csrf
             <fieldset class="sch-status-pick"><legend>Day</legend>
-                @foreach (['working' => 'Working ('.Schedule::fmtHours($roster->daily_hours).' h)', 'partial' => 'Partial day', 'off' => 'Off', '' => 'Not scheduled'] as $k => $l)
-                    <label class="sch-opt"><input type="radio" name="status" value="{{ $k }}" @checked(old('status', $st ?? '') === $k)> <span>{{ $l }}</span></label>
+                @foreach (['working' => 'Working ('.Schedule::fmtHours($roster->daily_hours).' h)', 'partial' => 'Partial day', 'off' => 'Off'] as $k => $l)
+                    <label class="sch-opt"><input type="radio" name="status" value="{{ $k }}" @checked(old('status', $st) === $k)> <span>{{ $l }}</span></label>
                 @endforeach
+                <p class="pb-muted">Blank = working: a day nobody marked counts as Working.</p>
             </fieldset>
             <div class="pb-grid-3">
                 <div class="f-field" id="hoursField"><label for="hours">Hours (partial day)</label><input id="hours" class="pb-input" type="number" step="0.25" min="0.25" max="16" name="hours" value="{{ old('hours', $cell->hours !== null ? Schedule::fmtHours($cell->hours) : '') }}"></div>
@@ -27,7 +28,7 @@
             f.addEventListener('change', upd); upd(); })();
         </script>
     @else
-        <p><b>{{ $st ? ScheduleCell::STATUSES[$st] : 'Not scheduled' }}</b>{{ $st === 'partial' ? ' · '.Schedule::fmtHours($cell->hours).' h' : '' }}{{ $cell->note ? ' · '.$cell->note : '' }}</p>
+        <p><b>{{ ScheduleCell::STATUSES[$st] }}</b>{{ \App\Models\ScheduleCell::isDefault($cell) ? ' (blank = working)' : '' }}{{ $st === 'partial' ? ' · '.Schedule::fmtHours($cell->hours).' h' : '' }}{{ $cell->note ? ' · '.$cell->note : '' }}</p>
     @endif
 </section>
 

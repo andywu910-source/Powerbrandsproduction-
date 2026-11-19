@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\ComplianceEntry;
 use App\Models\ComplianceItem;
+use App\Models\User;
 use App\Support\Compliance;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /** Compliance Checklists: weekly (Mon-Sun) and monthly, with history. Internal, not official OCM documents. */
@@ -29,7 +31,7 @@ class ComplianceController extends Controller
         $freq = $this->freq($freq);
         $start = Compliance::periodStart($freq, $r->input('period'));
         $items = Compliance::items($freq, $start);
-        $entries = ComplianceEntry::with('assignee', 'completedBy')->whereIn('item_id', $items->pluck('id'))
+        $entries = ComplianceEntry::with('assignee', 'completedBy', 'signatures.user', 'revisions')->whereIn('item_id', $items->pluck('id'))
             ->whereDate('period_start', $start->toDateString())->get()->keyBy('item_id');
 
         return view('compliance.period', [
@@ -40,7 +42,7 @@ class ComplianceController extends Controller
         ]);
     }
 
-    public function save(Request $r, string $freq, string $period, ComplianceItem $item)
+    public function save(Request $r, string $freq, string $period, ComplianceItem $item, \App\Services\SignatureService $sigs)
     {
         $freq = $this->freq($freq);
         abort_unless($item->frequency === $freq, 404);
@@ -60,7 +62,15 @@ class ComplianceController extends Controller
 
         $e = ComplianceEntry::where('item_id', $item->id)->whereDate('period_start', $start->toDateString())->first()
             ?? new ComplianceEntry(['item_id' => $item->id, 'period_start' => $start->toDateString()]);
-        $done = $r->has('done') ? (bool) ($d['done'] ?? false) : (bool) $e->done;
+        $wasDone = (bool) $e->done;
+        $signed = $e->exists ? $e->validSignature() : null;   // a live sign-off: the check, who and when change only through "Revise"
+        if ($signed && $r->boolean('revise')) {
+            return $this->revise($r, $e, $signed, $item, $freq, $start);
+        }
+        $done = $r->has('done') ? (bool) ($d['done'] ?? false) : $wasDone;
+        if ($signed && ! $done) {
+            return back()->withErrors(['done' => 'This item is signed off by '.$signed->signerName().'. To change it, use "Revise my check-in" on the item (the original sign-off stays on record). An admin can also void a sign-off, with a reason.']);
+        }
         $fill = ['done' => $done, 'updated_by_user_id' => $r->user()->id];
         if ($r->has('assignee_user_id')) {
             $fill['assignee_user_id'] = $d['assignee_user_id'] ?? null;
@@ -68,10 +78,17 @@ class ComplianceController extends Controller
         if ($r->has('note')) {
             $fill['note'] = trim((string) ($d['note'] ?? '')) ?: null;
         }
-        if ($done) {
+        if ($signed) {
+            // Signed off: here only the assignee and note can change (kept in the item's history). Who completed it,
+            // the date and the check itself change only through "Revise my check-in".
+            $fill['done'] = true;
+        } elseif ($done) {
             $by = $d['completed_by_user_id'] ?? ($r->has('completed_by_user_id') ? null : $e->completed_by_user_id);
+            if ($r->user()->signsAsSelf()) {
+                $by = $r->user()->id;   // staff sign off their own work (this includes Jack H, Andy Nov 19)
+            }
             if (! $by) {
-                if (Compliance::excluded($r->user())) {
+                if (! Compliance::canSignOff($r->user())) {
                     return back()->withErrors(['completed_by_user_id' => 'Pick who completed it.'])->withInput();
                 }
                 $by = $r->user()->id;   // default: the person checking it
@@ -82,10 +99,117 @@ class ComplianceController extends Controller
             $fill['completed_by_user_id'] = null;
             $fill['completed_on'] = null;
         }
-        $e->fill($fill)->save();
+        // Checking an item (not done -> done) is a sign-off: who, name and time are recorded and can never be edited.
+        $signNow = $done && ! $wasDone && ! $signed;
+        $oldAssignee = $e->assignee?->name;
+        $oldNote = $e->note;
+        $afterRevisedUncheck = $signNow && $e->exists && ($e->revisions->whereIn('kind', ['revised', 'confirmed'])->last()?->kind === 'revised');
+        DB::transaction(function () use ($e, $fill, $signNow, $signed, $r, $sigs, $oldAssignee, $oldNote, $afterRevisedUncheck) {
+            $e->fill($fill)->save();
+            if ($signNow) {
+                $sig = $sigs->sign($e, 'completed', (int) $e->completed_by_user_id, $r->user());
+                if ($afterRevisedUncheck) {   // un-checked through "Revise", now checked again: that is the confirmation
+                    $this->addHistory($e, 'confirmed', $r->user(), [], 'Checked again after a revision', $sig->id);
+                }
+            } elseif ($signed) {
+                $e->load('assignee');
+                $ch = [];
+                if ($oldAssignee !== $e->assignee?->name) {
+                    $ch['Assignee'] = [$oldAssignee, $e->assignee?->name];
+                }
+                if ($oldNote !== $e->note) {
+                    $ch['Note'] = [$oldNote, $e->note];
+                }
+                if ($ch) {
+                    $this->addHistory($e, 'edited', $r->user(), $ch, null, $signed->id);
+                }
+            }
+        });
 
         return redirect()->to(route('compliance.period', [$freq, 'period' => $start->toDateString()]).'#item-'.$item->id)
-            ->with('status', $done ? "Checked: {$item->title}." : "Saved: {$item->title}.");
+            ->with('status', $signNow ? "Signed off: {$item->title}." : ($done ? "Checked: {$item->title}." : "Saved: {$item->title}."));
+    }
+
+    /** Appends one row to the item's history (never edited or deleted). */
+    private function addHistory(ComplianceEntry $e, string $kind, \App\Models\User $by, array $changes, ?string $reason, ?int $sigId): void
+    {
+        \App\Models\SignoffRevision::create([
+            'signable_type' => $e->getMorphClass(), 'signable_id' => $e->getKey(), 'signature_id' => $sigId, 'kind' => $kind,
+            'user_id' => $by->id, 'user_name' => $by->name, 'changes' => $changes ? json_encode($changes) : null, 'reason' => $reason,
+        ]);
+    }
+
+    /**
+     * Revise a signed check-in (Andy, Nov 19): the person who signed it (or an admin) may change the check, date, note
+     * or assignee with a reason, then must re-confirm. The original sign-off, this revision (who, when, old -> new) and
+     * the re-confirmation all stay on record. Nothing is deleted.
+     */
+    private function revise(Request $r, ComplianceEntry $e, \App\Models\Signature $signed, ComplianceItem $item, string $freq, CarbonImmutable $start)
+    {
+        $me = $r->user();
+        abort_unless($me->isAdmin() || $signed->user_id === $me->id || $signed->recorded_by_user_id === $me->id, 403, 'Only the person who signed this (or an admin) can revise it.');
+        $r->validate(['reason' => ['required', 'string', 'min:3', 'max:1000']], ['reason.required' => 'Say why you are revising it.', 'reason.min' => 'Say why you are revising it.']);
+        $newDone = $r->boolean('done');
+        $newDate = $r->filled('completed_on') ? CarbonImmutable::parse($r->input('completed_on'))->toDateString() : $e->completed_on?->toDateString();
+        $newNote = $r->has('note') ? (trim((string) $r->input('note')) ?: null) : $e->note;
+        $newAssignee = $r->has('assignee_user_id') ? ($r->integer('assignee_user_id') ?: null) : $e->assignee_user_id;
+        if ($newAssignee && ! Compliance::pickable()->contains('id', $newAssignee)) {
+            return back()->withErrors(['assignee_user_id' => 'That person cannot be picked for compliance checklists.']);
+        }
+        $names = fn ($id) => $id ? User::find($id)?->name : null;
+        $ch = [];
+        if ($newDone !== (bool) $e->done) {
+            $ch['Done'] = [$e->done ? 'Done' : 'Not done', $newDone ? 'Done' : 'Not done'];
+        }
+        if ($newDone && $newDate !== $e->completed_on?->toDateString()) {
+            $ch['Date'] = [$e->completed_on?->toDateString(), $newDate];
+        }
+        if ($newNote !== $e->note) {
+            $ch['Note'] = [$e->note, $newNote];
+        }
+        if ($newAssignee !== $e->assignee_user_id) {
+            $ch['Assignee'] = [$names($e->assignee_user_id), $names($newAssignee)];
+        }
+        if (! $ch) {
+            return back()->withErrors(['revise' => 'Nothing was changed, so there is nothing to revise.']);
+        }
+        $reason = trim((string) $r->input('reason'));
+        DB::transaction(function () use ($e, $signed, $me, $newDone, $newDate, $newNote, $newAssignee, $ch, $reason) {
+            $e->fill([
+                'done' => $newDone, 'note' => $newNote, 'assignee_user_id' => $newAssignee, 'updated_by_user_id' => $me->id,
+                'completed_on' => $newDone ? $newDate : null, 'completed_by_user_id' => $newDone ? $e->completed_by_user_id : null,
+            ])->save();
+            if (! $newDone) {
+                // Un-checked: the old sign-off is kept and marked "no longer valid"; checking again signs it afresh.
+                $signed->forceFill(['invalidated_at' => now()])->save();
+            }
+            $this->addHistory($e, 'revised', $me, $ch, $reason, $signed->id);
+            \App\Services\Audit::log('revise_signoff', $e, ['changes' => $ch, 'reason' => $reason, 'signature_id' => $signed->id]);
+        });
+
+        return redirect()->to(route('compliance.period', [$freq, 'period' => $start->toDateString()]).'#item-'.$item->id)
+            ->with('status', $newDone ? "Revised: {$item->title}. Please confirm your revision." : "Un-checked: {$item->title}. The original sign-off stays on record.");
+    }
+
+    /** Re-confirm a revision: a new sign-off by the person who revised it (never anyone else). */
+    public function confirm(Request $r, string $freq, string $period, ComplianceItem $item, \App\Services\SignatureService $sigs)
+    {
+        $freq = $this->freq($freq);
+        abort_unless($item->frequency === $freq, 404);
+        $start = Compliance::periodStart($freq, $period);
+        abort_unless($start->toDateString() === CarbonImmutable::parse($period)->toDateString(), 404);
+        abort_unless(Compliance::canEdit($r->user(), $freq, $start), 403, 'Past periods are read-only. Only admins can change them.');
+        $e = ComplianceEntry::where('item_id', $item->id)->whereDate('period_start', $start->toDateString())->firstOrFail();
+        $pending = $e->pendingRevision();
+        abort_unless($pending, 404, 'There is no revision waiting to be confirmed.');
+        abort_unless($pending->user_id === $r->user()->id, 403, 'Only '.$pending->user_name.', who made the revision, can confirm it.');
+        DB::transaction(function () use ($e, $r, $sigs) {
+            $sig = $sigs->sign($e, 'reconfirmed', $r->user()->id, $r->user());
+            $this->addHistory($e, 'confirmed', $r->user(), [], null, $sig->id);
+        });
+
+        return redirect()->to(route('compliance.period', [$freq, 'period' => $start->toDateString()]).'#item-'.$item->id)
+            ->with('status', "Re-confirmed: {$item->title}.");
     }
 
     public function history(Request $r)

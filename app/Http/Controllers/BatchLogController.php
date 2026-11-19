@@ -70,6 +70,29 @@ class BatchLogController extends Controller
         return back()->with('status', "{$batch->batch_number}: ".Batch::LOG_STATUSES[$old].' → '.Batch::LOG_STATUSES[$d['log_status']].'.');
     }
 
+    /**
+     * Batch log sign-off: "Batch log signed off by". Anyone who can write (staff included) signs in their own name;
+     * the sign-off is immutable (an admin can void it with a reason). One live sign-off per person per batch.
+     */
+    public function signoff(Request $r, Batch $batch, \App\Services\SignatureService $sig)
+    {
+        abort_if($r->user()->isViewer(), 403);
+        $r->validate(['signer_id' => ['required', 'integer']], ['signer_id.required' => 'Pick your name to sign off.']);
+        if ($batch->status === 'void') {
+            return back()->withErrors(['signer_id' => "Batch {$batch->batch_number} is void; it cannot be signed off."]);
+        }
+        if ($batch->isIncoming()) {
+            return back()->withErrors(['signer_id' => "{$batch->batch_number} has not started yet (Incoming), so there is no batch log to sign off."]);
+        }
+        $signerId = (int) $r->input('signer_id');
+        if ($batch->signatures()->where('meaning', 'log_signoff')->where('user_id', $signerId)->whereNull('invalidated_at')->exists()) {
+            return back()->with('status', 'That person has already signed off this batch log.');
+        }
+        $s = $sig->sign($batch, 'log_signoff', $signerId, $r->user());
+
+        return redirect()->to(route('batch-log.show', $batch).'#signoff')->with('status', "Batch log signed off by {$s->signerName()}.");
+    }
+
     /** Barcode number printed on case labels. Admins and supervisors only; the change is in the audit log (old and new). */
     public function barcode(Request $r, Batch $batch)
     {

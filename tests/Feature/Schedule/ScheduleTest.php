@@ -100,7 +100,7 @@ class ScheduleTest extends TestCase
         $this->assertSame(['off', true], [$fri->status, $fri->from_recurring]);
 
         $grid = fn () => collect(app(ScheduleService::class)->grid($w->fresh())['rows'])->keyBy(fn ($r) => $r['employee']->name);
-        $this->assertSame(0.0, $grid()['Keith']['hours'], 'empty days count nothing');
+        $this->assertSame(42.5, $grid()['Keith']['hours'], 'blank = working (Nov 19): 5 x 8.5');
 
         $u = "/schedule/w/{$w->id}/p/{$keith->id}/";
         $this->actingAs($this->andy)->post($u.'2026-11-16', ['status' => 'working', 'note' => 'static boro'])->assertSessionHasNoErrors();
@@ -109,18 +109,19 @@ class ScheduleTest extends TestCase
         $this->actingAs($this->andy)->post($u.'2026-11-19', ['status' => 'partial'])->assertSessionHasErrors('hours');
         $this->actingAs($this->andy)->post($u.'2026-11-21', ['status' => 'working'])->assertSessionHasErrors();   // Saturday is not on the week
         $this->assertFalse(ScheduleCell::whereDate('day', '2026-11-21')->exists());
-        $this->assertSame(13.5, $grid()['Keith']['hours']);
-        $this->assertSame(0.0, $grid()['Dorothy']['hours']);
+        $this->assertSame(30.5, $grid()['Keith']['hours'], '8.5 + 5 + off + 2 blank x 8.5');
+        $this->assertSame(32.0, $grid()['Dorothy']['hours'], 'Mon-Thu blank = working, Friday recurring off');
 
         $page = $this->actingAs($this->op)->get('/schedule?week=2026-11-18')->assertOk()->getContent();   // any day of the week opens that week
         $this->assertStringContainsString('Partial · 5 h', $page);
         $this->assertStringNotContainsString('Off every Friday', $page, 'no description under the names');
         $this->assertStringNotContainsString('h day<', $page);
-        $this->assertStringNotContainsString('<th class="sch-hours">Hours</th>', $page, 'no hours total column');
+        $this->assertStringNotContainsString('<th class="sch-hours">Hours</th>', $page, 'the old hours column stays gone');
+        $this->assertStringContainsString('Total hours <span class="sch-total-note">scheduled</span>', $page, 'Total hours (scheduled) column, Nov 19');
         $this->assertStringNotContainsString('<tfoot>', $page);
         $this->assertStringNotContainsString('Labor $', $page, 'labor dollars are hidden by default');
         config(['pbp.schedule.show_labor' => true]);
-        $this->assertStringContainsString('$270', $this->actingAs($this->op)->get('/schedule?week='.self::W)->getContent());   // 13.5 h x $20
+        $this->assertStringContainsString('$610', $this->actingAs($this->op)->get('/schedule?week='.self::W)->getContent());   // 30.5 h x $20 (blank = working)
         $this->assertTrue(AuditLog::where('record_type', 'schedule_cell')->exists());
     }
 
@@ -325,7 +326,7 @@ class ScheduleTest extends TestCase
             $this->assertSame(1, ScheduleWeek::count());
             $rows = collect(app(ScheduleService::class)->grid($this->week())['rows'])->keyBy(fn ($r) => $r['employee']->name);
             $this->assertSame(12, $rows->count());
-            $this->assertSame([0.0, 17.0, 7.0, 8.0, 0.0], [$rows['Keith']['hours'], $rows['Jeff']['hours'], $rows['Dorthy']['hours'], $rows['Manny']['hours'], $rows['Jenny']['hours']]);
+            $this->assertSame([25.5, 42.5, 23.0, 40.0, 40.0], [$rows['Keith']['hours'], $rows['Jeff']['hours'], $rows['Dorthy']['hours'], $rows['Manny']['hours'], $rows['Jenny']['hours']]);
             $this->assertSame('off', ScheduleCell::where('employee_id', $rows['Dorthy']['employee']->id)->whereDate('day', '2026-11-20')->value('status'));
             $this->assertSame(6, ScheduleNote::count());   // 3 Going to lab + 3 Pending
         }

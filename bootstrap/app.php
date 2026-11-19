@@ -18,8 +18,16 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => \App\Http\Middleware\EnsureActiveUser::class,
             'writable' => \App\Http\Middleware\BlockViewerWrites::class,
             'module' => \App\Http\Middleware\EnsureModule::class,
+            'logs.visible' => \App\Http\Middleware\EnsureLogsHubVisible::class,
         ]);
         $middleware->append(\App\Http\Middleware\PreviewHeaders::class);
+        // Compliance hub preview-link sessions: /logs + logout only (no effect on normal sessions).
+        $middleware->web(append: [\App\Http\Middleware\LogsPreviewScope::class]);
+        // ...and it runs before the sign-in check, so a hidden /logs is a 404 even for guests.
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class,
+            prepend: \App\Http\Middleware\LogsPreviewScope::class,
+        );
         $middleware->redirectGuestsTo(fn () => route('login'));
         $middleware->redirectUsersTo(fn () => route('dashboard'));
     })

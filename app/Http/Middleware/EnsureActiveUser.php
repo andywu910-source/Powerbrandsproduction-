@@ -26,6 +26,7 @@ class EnsureActiveUser
         }
 
         if ($user && $user->must_change_password
+            && ! $request->session()->has(\App\Models\LogsPreviewToken::SESSION_KEY) // preview links can't reach /password
             && ! $request->routeIs('password.edit', 'password.update', 'logout')) {
             return redirect()->route('password.edit')
                 ->with('status', 'Please choose a new password to continue.');

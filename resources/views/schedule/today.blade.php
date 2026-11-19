@@ -16,17 +16,19 @@
         <p class="pb-muted">This week isn't set up yet.</p>
     @else
         @php
-            $working = collect($rows)->filter(fn ($r) => in_array($r['cell']?->status, ['working', 'partial'], true));
-            $off = collect($rows)->filter(fn ($r) => $r['cell']?->status === 'off');
-            $none = collect($rows)->filter(fn ($r) => ! $r['cell']?->status);
+            // Blank = working (Nov 19): only Off days are off.
+            $working = collect($rows)->filter(fn ($r) => \App\Models\ScheduleCell::effective($r['cell']) !== 'off');
+            $off = collect($rows)->filter(fn ($r) => \App\Models\ScheduleCell::effective($r['cell']) === 'off');
+            $none = collect();
         @endphp
         <p class="pb-muted">{{ $working->count() }} working · {{ Schedule::fmtHours($working->sum(fn ($r) => \App\Models\ScheduleCell::hoursFor($r['cell'], (float) $r['roster']->daily_hours))) }} h planned</p>
         @foreach ($working as $r)
             <a class="sch-today-card" href="{{ route('schedule.cell', [$week, $r['employee'], $day->toDateString()]) }}">
                 <div class="sch-today-head"><b>{{ $r['employee']->name }}</b>
-                    <span class="sch-chip {{ $r['cell']->status }}">{{ $r['cell']->status === 'partial' ? 'Partial · '.Schedule::fmtHours($r['cell']->hours).' h' : Schedule::fmtHours($r['roster']->daily_hours).' h' }}</span></div>
-                @if ($r['cell']->note)<div class="sch-note">{{ $r['cell']->note }}</div>@endif
-                @foreach ($r['cell']->jobs as $job) @include('schedule._job', ['job' => $job]) @endforeach
+                    @php $eff = \App\Models\ScheduleCell::effective($r['cell']); @endphp
+                    <span class="sch-chip {{ $eff }}">{{ $eff === 'partial' ? 'Partial · '.Schedule::fmtHours($r['cell']->hours).' h' : Schedule::fmtHours($r['roster']->daily_hours).' h' }}</span></div>
+                @if ($r['cell']?->note)<div class="sch-note">{{ $r['cell']->note }}</div>@endif
+                @foreach ($r['cell']?->jobs ?? [] as $job) @include('schedule._job', ['job' => $job]) @endforeach
             </a>
         @endforeach
         @if ($off->count())<p class="sch-today-off"><b>Off:</b> {{ $off->map(fn ($r) => $r['employee']->name)->implode(', ') }}</p>@endif

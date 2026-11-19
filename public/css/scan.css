@@ -1,0 +1,17 @@
+/* Scan control (partials/scan.blade.php + js/scan.js) */
+.pb-scan-wrap { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; }
+.pb-scan-wrap > .pb-input, .pb-scan-wrap > textarea, .pb-scan-wrap > select { flex: 1 1 200px; min-width: 0; }
+.pb-scan-btn { display: inline-flex; align-items: center; gap: 5px; padding: 0 12px; min-height: 38px; border: 1px solid var(--pb-border, #cfd6e0);
+    border-radius: 8px; background: var(--pb-surface, #fff); color: inherit; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.pb-scan-btn:hover, .pb-scan-btn:focus-visible { border-color: var(--pb-accent, #2f6fed); color: var(--pb-accent, #2f6fed); }
+.pb-scan-msg { flex-basis: 100%; font-size: 12px; min-height: 0; color: var(--pb-muted, #6b7280); }
+.pb-scan-msg:empty { display: none; }
+.pb-scan-msg.is-err { color: #b42318; font-weight: 600; }
+.pb-scan-msg.is-ok { color: #067647; }
+.pb-scan-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(10, 14, 22, .82); display: none; align-items: center; justify-content: center; padding: 16px; }
+.pb-scan-overlay.is-open { display: flex; }
+.pb-scan-box { position: relative; width: min(560px, 100%); background: #111; border-radius: 14px; overflow: hidden; text-align: center; padding-bottom: 14px; }
+.pb-scan-box video { display: block; width: 100%; max-height: 70vh; object-fit: cover; background: #000; aspect-ratio: 4 / 3; }
+.pb-scan-aim { position: absolute; left: 10%; right: 10%; top: 22%; height: 30%; border: 3px solid rgba(255,255,255,.85); border-radius: 10px; box-shadow: 0 0 0 9999px rgba(0,0,0,.25); pointer-events: none; }
+.pb-scan-status { color: #fff; margin: 12px 14px; font-size: 14px; }
+.pb-scan-close { min-width: 120px; }

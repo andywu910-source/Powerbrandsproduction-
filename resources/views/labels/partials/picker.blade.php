@@ -5,8 +5,8 @@
 <form method="GET" action="{{ route('labels.create') }}" class="pb-label-picker" id="batchPicker" autocomplete="off">
     <div class="f-field pb-combo">
         <label for="pickBatch">Batch</label>
-        <input id="pickBatch" name="q" class="pb-input pb-bn" value="{{ $current ?? '' }}" placeholder="Type a batch #, product, strain, brand or barcode…"
-            autocomplete="off" spellcheck="false" required role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="batchDrop">
+        <div class="pb-scan-wrap"><input id="pickBatch" name="q" class="pb-input pb-bn" value="{{ $current ?? '' }}" placeholder="Type a batch #, product, strain, brand or scan a barcode…"
+            autocomplete="off" spellcheck="false" required role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="batchDrop" data-scan="search">@include('partials.scan', ['for' => 'pickBatch', 'label' => 'batch search'])</div>
         <input type="hidden" name="batch_id" id="pickBatchId" value="" disabled>
         <div class="pb-combo-drop" id="batchDrop" role="listbox" hidden></div>
     </div>

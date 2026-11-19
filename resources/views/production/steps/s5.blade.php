@@ -9,9 +9,10 @@
 <form method="POST" action="{{ route('production.calculate', $batch) }}" class="pb-inline-form">@csrf
     @foreach ($potLines as $line)
         <div class="f-field"><label>{{ $line->ingredient->name }} lot (its COA potency is used)</label>
-            <select name="lots[{{ $line->id }}]" class="pb-select" required><option value="">—</option>
+            <select id="s5_calc_lot_{{ $line->id }}" name="lots[{{ $line->id }}]" class="pb-select" required><option value="">—</option>
             @foreach ($lotOptions[$line->id] ?? [] as $o)<option value="{{ $o['lot']->id }}">{{ $o['lot']->public_id }} · {{ $o['lot']->potency_pct }}% · {{ Fmt::qty($o['available'], $o['lot']->unit) }} free</option>@endforeach
-            </select></div>
+            </select>
+            <div class="pb-scan-wrap"><input id="s5_calc_scan_{{ $line->id }}" class="pb-input" form="s5_none" placeholder="…or scan / type the lot's Metrc package UID" data-scan="metrc" data-scan-lot="#s5_calc_lot_{{ $line->id }}" aria-label="Metrc package UID for {{ $line->ingredient->name }}">@include('partials.scan', ['for' => 's5_calc_scan_'.$line->id, 'label' => $line->ingredient->name.' lot'])</div></div>
     @endforeach
     <button class="pb-btn pb-btn-ghost" type="submit">{{ $calc ? 'Recalculate' : 'Calculate' }} for {{ number_format($batch->target_units) }} units</button>
 </form>
@@ -36,11 +37,13 @@
 <h4 style="margin-top:16px">2 · Pick released lots, weigh and verify</h4>
 @if ($isOpen)
 <form method="POST" action="{{ route('production.pick', $batch) }}" class="pb-inline-form">@csrf
-    <div class="f-field"><label>Ingredient</label><select name="mmp_line_id" class="pb-select" required><option value="">—</option>
+    <div class="f-field"><label for="s5_pick_scan">Scan lot tag</label><div class="pb-scan-wrap"><input id="s5_pick_scan" class="pb-input" form="s5_none" placeholder="Metrc package UID: scan or type" data-scan="metrc" data-scan-lot="#s5_pick_lot" aria-describedby="s5_pick_hint">@include('partials.scan', ['for' => 's5_pick_scan', 'label' => 'lot tag'])</div>
+        <small class="pb-muted" id="s5_pick_hint">Picks the ingredient and released lot below.</small></div>
+    <div class="f-field"><label>Ingredient</label><select id="s5_pick_line" name="mmp_line_id" class="pb-select" required><option value="">—</option>
         @foreach ($batch->mmp->lines as $line)<option value="{{ $line->id }}">{{ $line->ingredient->name }}</option>@endforeach</select></div>
-    <div class="f-field"><label>Released lot</label><select name="material_lot_id" class="pb-select" required><option value="">—</option>
+    <div class="f-field"><label>Released lot</label><select id="s5_pick_lot" name="material_lot_id" class="pb-select" data-scan-line="#s5_pick_line" required><option value="">—</option>
         @foreach ($batch->mmp->lines as $line)
-            <optgroup label="{{ $line->ingredient->name }}">
+            <optgroup label="{{ $line->ingredient->name }}" data-line="{{ $line->id }}">
             @foreach ($lotOptions[$line->id] ?? [] as $o)<option value="{{ $o['lot']->id }}">{{ $o['lot']->public_id }} · {{ Fmt::qty($o['available'], $o['lot']->unit) }} free{{ $o['lot']->expiration_date ? ' · exp '.Fmt::date($o['lot']->expiration_date) : '' }}</option>@endforeach
             </optgroup>
         @endforeach</select></div>

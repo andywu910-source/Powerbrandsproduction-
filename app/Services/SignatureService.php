@@ -38,6 +38,8 @@ class SignatureService
         'completed' => 'Completed by',
         'adjusted' => 'Stock adjustment by',
         'sampled' => 'Lab sampling witnessed by (our employee)',
+        'log_signoff' => 'Batch log signed off by',
+        'reconfirmed' => 'Re-confirmed after revision by',
     ];
 
     /**
@@ -54,6 +56,9 @@ class SignatureService
         }
         if ($why = $signer->signingBlocker()) {
             throw GateFailed::because($why);
+        }
+        if ($recordedBy->signsAsSelf() && $signer->id !== $recordedBy->id) {
+            throw GateFailed::because('You are signed in as '.$recordedBy->name.'. Staff accounts can only sign their own work, so you cannot sign as '.$signer->name.'.');
         }
 
         // PIN / password (when switched on) come from the form: signing_credential[<user id>] or signing_credential.
@@ -81,6 +86,7 @@ class SignatureService
             'meaning' => $meaning,
             'meaning_text' => self::MEANINGS[$meaning] ?? ucfirst(str_replace('_', ' ', $meaning)),
             'user_id' => $signer->id,
+            'signer_name' => $signer->name,
             'recorded_by_user_id' => $recordedBy->id,
             'person_id' => $signer->person?->id,
             'signed_at' => now(),

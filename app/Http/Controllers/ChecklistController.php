@@ -19,6 +19,7 @@ class ChecklistController extends Controller
     {
         $this->svc->generate();   // make sure today's are there even if cron is late
         $open = ChecklistInstance::with('template', 'assignee', 'batch')->whereIn('status', ['due', 'in_progress', 'overdue', 'awaiting_verification'])
+            ->where(fn ($q) => $q->where('status', 'awaiting_verification')->orWhereHas('template', fn ($t) => $t->where('active', true)))   // retired templates: nothing left to fill in
             ->orderByRaw('overdue_at is null')->orderBy('due_at')->get();
         $done = ChecklistInstance::with('template')->where('status', 'completed')->orderByDesc('completed_at')->limit(30)->get();
 

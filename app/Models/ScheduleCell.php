@@ -5,7 +5,10 @@ namespace App\Models;
 use App\Models\Concerns\Audited;
 use Illuminate\Database\Eloquent\Model;
 
-/** One person, one day. status null = nothing scheduled (counts 0 hours). */
+/**
+ * One person, one day. Blank = working (Nov 19): a weekday with no cell, or a cell with no status, counts as Working
+ * at the week's day length. People only mark Off or Partial. Saved rows are never rewritten for this; it is read logic.
+ */
 class ScheduleCell extends Model
 {
     use Audited;
@@ -20,13 +23,27 @@ class ScheduleCell extends Model
     public function employee() { return $this->belongsTo(ScheduleEmployee::class, 'employee_id'); }
     public function jobs() { return $this->hasMany(ScheduleJob::class, 'cell_id')->whereNull('removed_at')->orderBy('sort_order')->orderBy('id'); }
 
-    /** Hours this cell counts: Working = the week's default day, Partial = its own hours, Off / empty = 0. */
+    /** working | partial | off. Blank (no cell, or no status) = working. */
+    public static function effective(?self $cell): string
+    {
+        $s = $cell?->status;
+
+        return in_array($s, ['off', 'partial'], true) ? $s : 'working';
+    }
+
+    /** True when the day shows Working only because nothing was marked (blank = working). */
+    public static function isDefault(?self $cell): bool
+    {
+        return ! in_array($cell?->status, ['working', 'off', 'partial'], true);
+    }
+
+    /** Hours this cell counts: Working (incl. blank) = the week's day length, Partial = its own hours, Off = 0. */
     public static function hoursFor(?self $cell, float $dailyHours): float
     {
-        return match ($cell?->status) {
-            'working' => $dailyHours,
+        return match (self::effective($cell)) {
             'partial' => (float) $cell->hours,
-            default => 0.0,
+            'off' => 0.0,
+            default => $dailyHours,
         };
     }
 }

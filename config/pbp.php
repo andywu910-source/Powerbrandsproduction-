@@ -8,7 +8,7 @@ return [
     'roles' => [
         'admin' => 'Admin',
         'supervisor' => 'Supervisor',
-        'operator' => 'Operator',
+        'operator' => 'Staff / operator',
         'viewer' => 'Viewer (read-only)',
     ],
 
@@ -53,6 +53,8 @@ return [
         'steps' => ['Grind', 'Formulate', 'Fill', 'Cap', 'Label', 'Pack', 'Lab', 'Equipment / cleaning'],
     ],
 
+    // 'logs' = Compliance hub (Nov 18). NOT in the default list and not in modules_release_on: only a site whose
+    // PBP_MODULES lists it gets the hub; everywhere else the Logs "Soon" tab stays as it was.
     'modules' => env('PBP_MODULES', 'production,receiving,checklists,batchlog,labels,schedule,compliance'),
     // Tabs this release switches on whatever PBP_MODULES says (any format, missing or duplicate key). Turn one
     // off again with PBP_MODULES_OFF=schedule in .env.
@@ -63,6 +65,13 @@ return [
     // Both also require APP_ENV=staging.
     'preview' => (bool) env('PBP_PREVIEW', false),                       // banner + noindex header
     'preview_guest_login' => (bool) env('PREVIEW_GUEST_LOGIN', false),   // one-time /guest/{token} links
+
+    // Compliance hub review links (php artisan logs:preview-link). Off unless PBP_PREVIEW_LINKS=true.
+    // A link signs in once as an existing user, for /logs only, for at most 24 hours.
+    'preview_links' => (bool) env('PBP_PREVIEW_LINKS', false),
+    // Review before release: with logs in PBP_MODULES AND this true, the hub (sidebar item, /logs pages) exists ONLY
+    // for preview-link sessions. Everyone else sees the old sidebar (Logs "Soon") and gets 404 on /logs.
+    'logs_preview_only' => (bool) env('PBP_LOGS_PREVIEW_ONLY', false),
 
     'inventory_source' => env('PBP_INVENTORY_SOURCE', 'receiving'),
 

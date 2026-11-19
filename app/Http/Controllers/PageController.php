@@ -18,7 +18,9 @@ class PageController extends Controller
         if ($useChecklists) {
             $checklists->generate();
         }
-        $open = ! $useChecklists ? collect() : ChecklistInstance::with('template')->whereIn('status', ['due', 'in_progress', 'overdue', 'awaiting_verification'])->whereNull('batch_id')->orderBy('due_at')->get();
+        $open = ! $useChecklists ? collect() : ChecklistInstance::with('template')->whereIn('status', ['due', 'in_progress', 'overdue', 'awaiting_verification'])->whereNull('batch_id')
+            ->where(fn ($q) => $q->where('status', 'awaiting_verification')->orWhereHas('template', fn ($t) => $t->where('active', true)))   // retired templates: nothing left to fill in
+            ->orderBy('due_at')->get();
 
         return view('pages.dashboard', [
             'overdue' => $open->filter(fn ($i) => $i->displayStatus() === 'overdue')->values(),
@@ -48,6 +50,9 @@ class PageController extends Controller
             'quality' => ['Quality', 'Complaints, recalls and retained samples. Coming in Phase 2.'],
         ];
         abort_unless(isset($sections[$section]), 404);
+        if ($section === 'logs' && \App\Support\LogHub::hubVisible(request())) {
+            return redirect()->route('logs.index');
+        }
         [$title, $blurb] = $sections[$section];
 
         return view('pages.coming-soon', compact('title', 'blurb', 'section'));

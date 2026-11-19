@@ -15,6 +15,7 @@ class PagesAndUsersTest extends TestCase
     {
         $op = User::factory()->create();
         $this->actingAs($op)->get('/dashboard')->assertOk()->assertSee('Production')->assertSee('Batch Log')->assertDontSee('>Users<', false);
+        config(['pbp.modules_off' => 'logs']);
         foreach (['/soon/labels', '/soon/logs'] as $url) {
             $this->actingAs($op)->get($url)->assertOk()->assertSee('coming soon', false);
         }

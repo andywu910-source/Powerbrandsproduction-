@@ -1,0 +1,53 @@
+/* Weekly Bookkeeping. Uses the same surfaces, type, and buttons as the rest of the app. */
+.bk-week { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.bk-week h3 { margin: 0; }
+.bk-num {
+    display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; margin-right: 8px;
+    border-radius: 50%; background: var(--pb-primary, var(--blue-2)); color: #fff; font-style: normal;
+    font-size: .9rem; font-family: Inter, sans-serif;
+}
+.bk-step.is-locked { opacity: .72; }
+.bk-status { font-weight: 600; margin: 8px 0; }
+.bk-pending { color: var(--pb-warn, var(--warn)); }
+.bk-upload { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.bk-drop {
+    border: 1.5px dashed var(--pb-border-strong, var(--line));
+    border-radius: 12px; padding: 18px; background: var(--pb-surface-2, var(--bg-2));
+}
+.bk-drop.over { border-color: var(--pb-primary, var(--blue-2)); background: var(--pb-primary-soft, rgba(79, 140, 255, .12)); }
+.bk-drop p { margin: 0 0 8px; }
+.bk-table { margin-top: 14px; }
+.bk-search { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 8px; }
+.bk-search .pb-combo { flex: 1 1 260px; }
+.bk-matches { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.bk-match {
+    width: 100%; display: flex; justify-content: space-between; gap: 12px; text-align: left;
+    padding: 10px 12px; border-radius: 10px; border: 1px solid var(--pb-border, var(--line));
+    background: var(--pb-surface, transparent); color: inherit; cursor: pointer; font: inherit;
+}
+.bk-match:hover { border-color: var(--pb-primary, var(--blue-2)); }
+.bk-sub { margin: 16px 0 8px; }
+.bk-cards { display: flex; flex-direction: column; gap: 12px; }
+.bk-card {
+    border: 1px solid var(--pb-border, var(--line)); border-radius: 12px; padding: 12px 14px;
+    background: var(--pb-surface-2, rgba(255, 255, 255, .03));
+}
+.bk-card-head { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.bk-card-head h4 { margin: 0; }
+.bk-invoices { list-style: none; margin: 8px 0; padding: 0; }
+.bk-invoices li { display: flex; gap: 14px; flex-wrap: wrap; padding: 4px 0; border-bottom: 1px solid var(--pb-border, var(--line)); }
+.bk-override, #bkTemplate { margin-top: 10px; }
+.bk-override summary, #bkTemplate summary { cursor: pointer; font-weight: 600; color: var(--pb-primary, var(--blue-2)); }
+.bk-template-form, .bk-signature, #bkDefaultForm { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.bk-preview {
+    margin-top: 12px; padding: 12px; border-radius: 12px; border: 1px solid var(--pb-border, var(--line));
+    background: var(--pb-surface, #fff); color: var(--pb-text, inherit);
+}
+.bk-preview-subject { font-weight: 700; margin: 0 0 8px; }
+.bk-preview-body { white-space: normal; }
+.bk-attach { margin: 10px 0 0; font-size: .88rem; color: var(--pb-text-muted, var(--muted)); }
+.bk-attach::before { content: "📎 "; }
+#bkSend { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-top: 8px; }
+#bkSend .btn-save:disabled, #bkUpdateLedger:disabled { opacity: .55; cursor: not-allowed; }
+
+#bkFiles select { min-width: 160px; }

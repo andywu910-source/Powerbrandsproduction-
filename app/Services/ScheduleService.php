@@ -111,6 +111,41 @@ class ScheduleService
         return ['rows' => $rows, 'hours' => $sum];
     }
 
+    /**
+     * Bulk: set every given person x weekday of this week to working or off (row = one person's week, day = everyone
+     * on one day). Notes and jobs stay. Each changed cell is audited as usual, plus one summary row for the action.
+     *
+     * @param  ScheduleEmployee[]  $people
+     * @param  CarbonImmutable[]  $days
+     */
+    public function bulkSet(ScheduleWeek $week, array $people, array $days, string $status, \App\Models\User $by, string $scope): int
+    {
+        if (! in_array($status, ['working', 'off'], true)) {
+            throw new \InvalidArgumentException('status must be working or off');
+        }
+        $changed = [];
+        \Illuminate\Support\Facades\DB::transaction(function () use ($week, $people, $days, $status, &$changed) {
+            foreach ($people as $e) {
+                foreach ($days as $d) {
+                    $cell = $this->cell($week, $e, $d);
+                    if ($cell->exists && $cell->status === $status && $cell->hours === null) {
+                        continue;   // already that (keeps a recurring day off marked as recurring)
+                    }
+                    $cell->fill(['week_id' => $week->id, 'status' => $status, 'hours' => null, 'from_recurring' => false]);
+                    if (! $cell->exists || $cell->isDirty()) {
+                        $cell->save();
+                        $changed[] = $cell->id;
+                    }
+                }
+            }
+        });
+        \App\Services\Audit::log('schedule_bulk', $week, ['scope' => $scope, 'status' => $status,
+            'people' => array_map(fn ($e) => $e->name, $people), 'days' => array_map(fn ($d) => $d->toDateString(), $days),
+            'changed' => count($changed), 'cell_ids' => $changed]);
+
+        return count($changed);
+    }
+
     public function cell(ScheduleWeek $week, ScheduleEmployee $e, CarbonImmutable $day): ScheduleCell
     {
         $this->assertDay($week, $day);
