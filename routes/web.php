@@ -197,6 +197,10 @@ Route::middleware(['auth', 'active', 'writable'])->group(function () {
     Route::get('/setup/{res}/{id}', [SetupController::class, 'edit'])->whereNumber('id')->name('setup.edit');
     Route::put('/setup/{res}/{id}', [SetupController::class, 'update'])->whereNumber('id')->name('setup.update');
 
+    // Weekly Bookkeeping (admin-only, switched with PBP_MODULES=bookkeeping).
+    // Kept in its own file so a hand-merge only adds this line here.
+    require __DIR__.'/bookkeeping.php';
+
     Route::middleware('role:admin')->prefix('users')->name('users.')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
         Route::post('/', [UserController::class, 'store'])->name('store');
