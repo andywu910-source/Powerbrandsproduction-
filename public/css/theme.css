@@ -205,3 +205,29 @@ tbody tr:hover { background: var(--pb-primary-soft); }
     .main { margin-left: 0 !important; }
     .card { box-shadow: none; }
 }
+
+/* ---------- Left menu scrollbar v2 (Nov 19 2026) ---------- */
+/* Additive only. The menu is position:fixed with top:0/bottom:0 (app.css), so it already
+   has a fixed height; this lets its items scroll when they don't fit, with a thin white
+   scrollbar that shows on the blue menu. Desktop (expanded) + mobile drawer. */
+.sidebar > * { flex-shrink: 0; }
+html:not(.sb-collapsed) .sidebar,
+.sidebar.open {
+    bottom: 0;
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 991px) {
+    .sidebar { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+}
+.sidebar::-webkit-scrollbar { width: 8px; }
+.sidebar::-webkit-scrollbar-track { background: rgba(255, 255, 255, .08); }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .55); border-radius: 8px; }
+.sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .8); }
+@supports (-moz-appearance: none) {
+    .sidebar { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .55) transparent; }
+}
