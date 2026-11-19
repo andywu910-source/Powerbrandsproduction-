@@ -5,10 +5,14 @@ namespace App\Support;
 /**
  * Which sidebar tabs are switched on. Tabs are rolled out one at a time
  * (PBP_MODULES in .env, or the default list in config/pbp.php).
+ *
+ * bookkeeping is in ALL so it can be switched on, but it is not in the default
+ * list and not in modules_release_on. It stays off until PBP_MODULES includes
+ * bookkeeping, and PBP_MODULES_OFF=bookkeeping turns it off again.
  */
 class Modules
 {
-    public const ALL = ['production', 'receiving', 'checklists', 'batchlog', 'labels', 'schedule', 'compliance'];
+    public const ALL = ['production', 'receiving', 'checklists', 'batchlog', 'labels', 'schedule', 'compliance', 'bookkeeping'];
 
     public static function enabled(string $m): bool
     {

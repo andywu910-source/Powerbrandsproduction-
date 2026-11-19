@@ -21,6 +21,7 @@
         'users' => '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
         'cal' => '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M7 13h3M14 13h3M7 17h3"/></svg>',
         'cog' => '<svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>',
+        'book' => '<svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
     ];
 @endphp
 <aside class="sidebar" id="sidebar">
@@ -61,6 +62,7 @@
                 @if ($u->isAdmin())
                     {!! $tab('settings.edit', 'Settings', $I['cog'], 'settings.*') !!}
                     {!! $tab('users.index', 'Users', $I['users'], 'users.*') !!}
+                    @if (Modules::enabled('bookkeeping')){!! $tab('bookkeeping.index', 'Bookkeeping', $I['book'], 'bookkeeping.*', 'bookkeeping') !!}@endif
                 @endif
             </div>
         </div>
